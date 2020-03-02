@@ -1,0 +1,59 @@
+pragma solidity >=0.5.0 <0.6.0;
+import "./ownable.sol";
+
+contract StreamBeenz is Ownable{
+    
+    uint totalBeenz;
+    
+    mapping (address => uint) ownerToBeenz;
+    mapping (address => uint) redeemerToId;
+    
+    address[] public redeemers;
+    
+    modifier enoughBeenz(uint number){
+        require(ownerToBeenz[msg.sender] >= number);
+        _;
+    }
+    
+    function giveBeenz(uint beenz, address recipient) public onlyOwner{
+        ownerToBeenz[recipient] += beenz;
+        totalBeenz += beenz;
+    }
+    
+    function addRedeemer(address redeemer) public onlyOwner{
+        uint id = redeemers.push(redeemer) - 1;
+        redeemerToId[redeemer] = id;
+    }
+    
+    function redeem(uint id) public{
+        require(id == redeemerToId[msg.sender]);
+        msg.sender.transfer(ownerToBeenz[msg.sender]);
+        totalBeenz -= ownerToBeenz[msg.sender];
+        ownerToBeenz[msg.sender] == 0;
+    }
+    
+    function buyBeenz() public payable{
+        require(msg.value % 2 == 0);
+        ownerToBeenz[msg.sender] += msg.value / 2;
+        totalBeenz += msg.value / 2;
+    }
+    
+    function viewSurplus() public view returns (int){
+        return(int(address(this).balance - totalBeenz));
+    }
+    
+    function withdraw() public onlyOwner{
+        require(viewSurplus() > 0);
+        msg.sender.transfer(uint(viewSurplus()));
+    }
+    
+    function destroyBeenz(uint amount) public enoughBeenz(amount){
+        ownerToBeenz[msg.sender] -= amount;
+        totalBeenz -= amount;
+    }
+    
+    function transferBeenz(address recipient, uint amount) public enoughBeenz(amount){
+        ownerToBeenz[msg.sender] -= amount;
+        ownerToBeenz[recipient] += amount;
+    }
+}
